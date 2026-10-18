@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medinest - Medicine Stores</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>🌿 Medinest</h1>
+    <p>Medicine Stores, Orders & Khata</p>
+  </header>
+
+  <!-- Auth Views -->
+  <div id="authView" class="container">
+    <!-- Login -->
+    <div id="loginCard" class="card">
+      <h2>Login</h2>
+      <div id="loginError" class="alert error hidden"></div>
+      <input type="email" id="loginEmail" placeholder="Email" autocomplete="email">
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <input type="checkbox" id="showLoginPw" style="width:auto;"> Show password
+      </label>
+      <button id="loginBtn">Sign In</button>
+      <p class="text-center mt-2">
+        <a href="#" id="showSignup">Create Account</a> |
+        <a href="#" id="showForgot">Forgot Password?</a>
+      </p>
+    </div>
+
+    <!-- Signup -->
+    <div id="signupCard" class="card hidden">
+      <h2>Create Account</h2>
+      <div id="signupError" class="alert error hidden"></div>
+      <input type="text" id="signupName" placeholder="Full Name">
+      <input type="email" id="signupEmail" placeholder="Email" autocomplete="email">
+      <input type="password" id="signupPassword" placeholder="Password (min 6 chars)" autocomplete="new-password">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <input type="checkbox" id="showSignupPw" style="width:auto;"> Show password
+      </label>
+      <select id="accountType">
+        <option value="customer">Customer</option>
+        <option value="homeo">Homeopathic Doctor</option>
+        <option value="allo">Allopathic Doctor</option>
+      </select>
+      <div id="doctorFields" class="hidden">
+        <input type="text" id="signupStoreName" placeholder="Store/Clinic Name">
+      </div>
+      <button id="signupBtn">Create Account</button>
+      <p class="text-center mt-2"><a href="#" id="showLogin">Back to Login</a></p>
+    </div>
+  </div>
+
+  <!-- Main App (hidden until login) -->
+  <div id="appView" class="hidden">
+    <!-- Tabs -->
+    <nav class="tabs" id="mainTabs">
+      <button class="tab active" data-tab="stores">🏪 Stores</button>
+      <button class="tab" data-tab="orders">📦 Orders</button>
+      <button class="tab" data-tab="tracking">🚚 Tracking</button>
+      <button class="tab" data-tab="ledger">📒 Ledger</button>
+      <button class="tab" data-tab="reviews">⭐ Reviews</button>
+      <button class="tab" data-tab="delivery">🛵 Delivery</button>
+      <button class="tab" id="logoutTab" style="margin-left:auto;">🚪 Logout</button>
+    </nav>
+
+    <div class="container">
+      <!-- STORES TAB -->
+      <section id="tab-stores">
+        <!-- Store List View -->
+        <div id="storeListView">
+          <div class="card">
+            <input type="text" id="storeSearch" placeholder="🔍 Search stores or doctors...">
+          </div>
+          <div class="card" id="createStoreCard">
+            <h3>Create Your Store</h3>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:12px;">One doctor = One store</p>
+            <input type="text" id="storeName" placeholder="Store/Clinic Name">
+            <input type="text" id="doctorName" placeholder="Doctor Name">
+            <select id="storeType">
+              <option value="homeo">Homeopathic</option>
+              <option value="allo">Allopathic</option>
+            </select>
+            <button id="createStoreBtn">Create Store</button>
+          </div>
+          <div id="storeList"></div>
+        </div>
+
+        <!-- Store Detail View -->
+        <div id="storeDetailView" class="hidden">
+          <div class="card">
+            <button id="backToStoresBtn" class="small">← Back to Stores</button>
+            <h2 id="detailStoreName" class="mt-2"></h2>
+            <p id="detailStoreDoctor"></p>
+            <p id="detailStoreType"></p>
+            <button id="delStoreBtn" class="danger small hidden mt-2">🗑️ Delete Store</button>
+
+            <hr style="margin:16px 0;">
+            <h3>Medicines</h3>
+            <div id="detailMedList"></div>
+
+            <hr style="margin:16px 0;">
+            <h3>Reviews <span id="detailAvgRating"></span></h3>
+            <div id="detailReviewList"></div>
+            <h4 class="mt-2">Write a Review</h4>
+            <select id="detailRevStars">
+              <option value="5">★★★★★ (5)</option>
+              <option value="4">★★★★ (4)</option>
+              <option value="3">★★★ (3)</option>
+              <option value="2">★★ (2)</option>
+              <option value="1">★ (1)</option>
+            </select>
+            <input type="text" id="detailRevText" placeholder="Write your review...">
+            <button id="detailAddRevBtn">Submit Review</button>
+          </div>
+        </div>
+
+        <!-- Medicine Management (owner only) -->
+        <div class="card" id="medMgmtCard">
+          <h3>Manage Medicines</h3>
+          <div id="medList"></div>
+          <hr style="margin:16px 0;">
+          <h4>Add Medicine</h4>
+          <input type="text" id="medName" placeholder="Medicine Name">
+          <input type="number" id="medPrice" placeholder="Price (Rs)" min="0">
+          <input type="number" id="medStock" placeholder="Stock Quantity" min="0">
+          <input type="text" id="medCompany" placeholder="Company/Manufacturer">
+          <select id="medCat"></select>
+          <select id="medStore"></select>
+          <input type="text" id="medPhoto" placeholder="Photo URL (optional)">
+          <button id="addMedBtn">Add Medicine</button>
+        </div>
+      </section>
+
+      <!-- ORDERS TAB -->
+      <section id="tab-orders" class="hidden">
+        <div class="card">
+          <h3>📦 My Orders</h3>
+          <div id="orderList"><p>No orders yet.</p></div>
+        </div>
+      </section>
+
+      <!-- TRACKING TAB -->
+      <section id="tab-tracking" class="hidden">
+        <div class="card">
+          <h3>🚚 Delivery Tracking</h3>
+          <div id="trackingList"><p>No orders to track.</p></div>
+        </div>
+      </section>
+
+      <!-- LEDGER TAB -->
+      <section id="tab-ledger" class="hidden">
+        <div class="card">
+          <h3>📒 Balance / Ledger</h3>
+          <div id="ledgerSummary"></div>
+          <div id="ledgerList"></div>
+          <hr style="margin:16px 0;">
+          <h4>Add Transaction</h4>
+          <input type="text" id="ledDesc" placeholder="Description">
+          <input type="number" id="ledAmt" placeholder="Amount (Rs)" min="0">
+          <select id="ledType">
+            <option value="pending">Pending</option>
+            <option value="received">Received</option>
+          </select>
+          <button id="addLedBtn">Add Transaction</button>
+        </div>
+      </section>
+
+      <!-- REVIEWS TAB -->
+      <section id="tab-reviews" class="hidden">
+        <div class="card">
+          <h3>⭐ All Reviews</h3>
+          <div id="allReviewsList"></div>
+        </div>
+      </section>
+
+      <!-- DELIVERY TAB -->
+      <section id="tab-delivery" class="hidden">
+        <div class="card">
+          <h3>🛵 Delivery Fee Calculator</h3>
+          <p style="color:#666;font-size:0.9rem;margin-bottom:12px;">For customers only</p>
+          <input type="number" id="delQty" placeholder="Quantity" min="1" value="1">
+          <input type="number" id="delWeight" placeholder="Weight (kg)" min="0.1" step="0.1" value="1">
+          <input type="number" id="delDistance" placeholder="Distance (km)" min="1" value="5">
+          <button id="calcDelBtn">Calculate Fee</button>
+          <div id="delResult" class="mt-2"></div>
+        </div>
+
+        <div class="card">
+          <h3>📞 Customer Support</h3>
+          <p>Phone/WhatsApp: <a href="https://wa.me/923198086233">+92 319 8086233</a></p>
+          <p class="mt-2"><a href="https://whatsapp.com/channel/0029Vb9MT0kChq6MFsUW142v" target="_blank">Join WhatsApp Channel 📢</a></p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Channel Join Overlay (after signup) -->
+  <div id="channelOverlay" class="channel-overlay hidden">
+    <div class="channel-box">
+      <h2>🎉 Welcome to Medinest!</h2>
+      <p class="mb-2">Join our WhatsApp channel for updates:</p>
+      <a href="https://whatsapp.com/channel/0029Vb9MT0kChq6MFsUW142v" target="_blank">
+        <button class="mb-2">📢 Join WhatsApp Channel</button>
+      </a>
+      <button id="channelContinue" class="secondary">Continue to App →</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/stores.js"></script>
+  <script src="js/medicines.js"></script>
+  <script src="js/orders.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
