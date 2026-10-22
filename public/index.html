@@ -64,6 +64,7 @@
       <button class="tab" data-tab="ledger">📒 Ledger</button>
       <button class="tab" data-tab="reviews">⭐ Reviews</button>
       <button class="tab" data-tab="delivery">🛵 Delivery</button>
+      <button class="tab" data-tab="dashboard" id="dashboardTab" style="display:none;">📊 Dashboard</button>
       <button class="tab" id="logoutTab" style="margin-left:auto;">🚪 Logout</button>
     </nav>
 
@@ -74,6 +75,11 @@
         <div id="storeListView">
           <div class="card">
             <input type="text" id="storeSearch" placeholder="🔍 Search stores or doctors...">
+            <div style="margin-top:8px;display:flex;gap:8px;">
+              <button id="storeFilterAll" class="small" style="width:auto;">All</button>
+              <button id="storeFilterHomeo" class="small" style="width:auto;">🌿 Homeo</button>
+              <button id="storeFilterAllo" class="small" style="width:auto;">💊 Allo</button>
+            </div>
           </div>
           <div class="card" id="createStoreCard">
             <h3>Create Your Store</h3>
@@ -195,6 +201,14 @@
           <p class="mt-2"><a href="https://whatsapp.com/channel/0029Vb9MT0kChq6MFsUW142v" target="_blank">Join WhatsApp Channel 📢</a></p>
         </div>
       </section>
+
+      <!-- DASHBOARD TAB (admin only) -->
+      <section id="tab-dashboard" class="hidden">
+        <div class="card">
+          <h3>📊 Admin Dashboard</h3>
+          <div id="dashboardContent"><p>Loading...</p></div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -217,6 +231,7 @@
   <script src="js/stores.js"></script>
   <script src="js/medicines.js"></script>
   <script src="js/orders.js"></script>
+  <script src="js/admin.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
