@@ -4,6 +4,7 @@ let stores = [];
 let storeReviewsCache = [];
 let storeReviewsLoaded = false;
 let currentStoreIdx = -1;
+let storeTypeFilter = 'all'; // 'all' | 'homeo' | 'allo'
 
 /**
  * Load all stores from Firestore
@@ -144,8 +145,11 @@ function renderStores() {
   const query = (document.getElementById('storeSearch').value || '').toLowerCase().trim();
 
   let filtered = stores;
+  if (storeTypeFilter !== 'all') {
+    filtered = filtered.filter(s => (s.type || 'homeo') === storeTypeFilter);
+  }
   if (query) {
-    filtered = stores.filter(s =>
+    filtered = filtered.filter(s =>
       (s.name || '').toLowerCase().includes(query) ||
       (s.doctor || '').toLowerCase().includes(query)
     );
@@ -172,6 +176,18 @@ function renderStores() {
   if (createCard) {
     createCard.style.display = userHasStore() ? 'none' : '';
   }
+}
+
+/**
+ * Set the store type filter (Homeo / Allo / All)
+ */
+function setStoreTypeFilter(type) {
+  storeTypeFilter = type;
+  ['All', 'Homeo', 'Allo'].forEach(t => {
+    const btn = document.getElementById('storeFilter' + t);
+    if (btn) btn.style.opacity = t.toLowerCase() === type ? '1' : '0.5';
+  });
+  renderStores();
 }
 
 /**
