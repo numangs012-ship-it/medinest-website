@@ -24,7 +24,7 @@ function switchTab(tabName) {
   });
 
   // Show/hide sections
-  const sections = ['stores', 'orders', 'tracking', 'ledger', 'reviews', 'delivery'];
+  const sections = ['stores', 'orders', 'tracking', 'ledger', 'reviews', 'delivery', 'dashboard'];
   sections.forEach(s => {
     const el = document.getElementById('tab-' + s);
     if (el) el.classList.toggle('hidden', s !== tabName);
@@ -33,6 +33,7 @@ function switchTab(tabName) {
   // Refresh data for the active tab
   if (tabName === 'reviews') renderAllReviews();
   if (tabName === 'tracking') renderTracking();
+  if (tabName === 'dashboard') renderDashboard();
 }
 
 /**
@@ -52,6 +53,22 @@ function showAuth() {
 }
 
 /**
+ * Apply role-based UI visibility (Step 4: role-gated UI pass)
+ * - Manage Medicines card: only for store owners (doctors)
+ * - Create Store card: only for doctor account types (customers cannot create stores)
+ */
+function applyRoleUI() {
+  const medMgmtCard = document.getElementById('medMgmtCard');
+  if (medMgmtCard) {
+    medMgmtCard.style.display = userHasStore() ? '' : 'none';
+  }
+  const createStoreCard = document.getElementById('createStoreCard');
+  if (createStoreCard) {
+    createStoreCard.style.display = (isDoctor() && !userHasStore()) ? '' : 'none';
+  }
+}
+
+/**
  * Load all data after login
  */
 async function loadAllData() {
@@ -60,12 +77,14 @@ async function loadAllData() {
     await loadMedicines();
     await loadOrders();
     await loadLedger();
+    applyRoleUI();
     renderStores();
     renderMedicines();
     renderMedStoreDropdown();
     renderOrders();
     renderTracking();
     renderLedger();
+    checkAdminAccess();
   } catch (e) {
     console.error('Failed to load data:', e);
     if (e.message && e.message.includes('Session expired')) {
@@ -130,6 +149,18 @@ async function handleSignup() {
   try {
     const result = await signup(email, password, accountType, { name: name });
 
+    // Write user profile doc (used by admin dashboard user count)
+    try {
+      await fsSet(COLLECTIONS.USERS, result.user.uid, {
+        name: name,
+        email: email,
+        accountType: accountType,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error('Failed to write user profile:', e);
+    }
+
     // If doctor, create their store immediately (one doctor = one store)
     if (accountType === 'homeo' || accountType === 'allo') {
       const storeName = document.getElementById('signupStoreName').value.trim();
@@ -182,7 +213,7 @@ function bindEvents() {
     document.getElementById('loginPassword').type = this.checked ? 'text' : 'password';
   };
   document.getElementById('showSignupPw').onchange = function() {
-    document.getElementById('loginPassword').type = this.checked ? 'text' : 'password';
+    document.getElementById('signupPassword').type = this.checked ? 'text' : 'password';
   };
 
   // Auth view switching
@@ -196,9 +227,25 @@ function bindEvents() {
     document.getElementById('signupCard').classList.add('hidden');
     document.getElementById('loginCard').classList.remove('hidden');
   };
-  document.getElementById('showForgot').onclick = e => {
+  document.getElementById('showForgot').onclick = async e => {
     e.preventDefault();
-    alert('Password reset: Please contact support at +92 319 8086233');
+    const email = prompt('Apna email likho, reset link bhej dunga:');
+    if (!email) return;
+    try {
+      const res = await fetch(AUTH_PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset', email: email.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && !data.error) {
+        alert('Reset link bhej diya! Email check karo.');
+      } else {
+        alert('Error: ' + (data.error && data.error.message ? data.error.message : data.error));
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
   // Doctor fields toggle
@@ -216,6 +263,9 @@ function bindEvents() {
   // Stores
   document.getElementById('createStoreBtn').onclick = createStore;
   document.getElementById('storeSearch').oninput = renderStores;
+  document.getElementById('storeFilterAll').onclick = () => setStoreTypeFilter('all');
+  document.getElementById('storeFilterHomeo').onclick = () => setStoreTypeFilter('homeo');
+  document.getElementById('storeFilterAllo').onclick = () => setStoreTypeFilter('allo');
   document.getElementById('backToStoresBtn').onclick = backToStores;
   document.getElementById('delStoreBtn').onclick = deleteStore;
   document.getElementById('detailAddRevBtn').onclick = submitStoreReview;
