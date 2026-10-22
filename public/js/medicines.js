@@ -238,6 +238,9 @@ async function orderMedicine(idx) {
   const user = getCurrentUser();
   const store = stores.find(s => String(s._id) === String(m.storeId));
 
+  const sellerUid = (store && store.ownerUid) || m.ownerUid || '';
+  const buyerUid = user.uid || '';
+
   try {
     // Create the order
     await fsAdd(COLLECTIONS.ORDERS, {
@@ -248,10 +251,11 @@ async function orderMedicine(idx) {
       total: (parseFloat(m.price) || 0) * qty,
       storeId: String(m.storeId || ''),
       storeName: m.storeName || '',
-      storeOwnerUid: (store && store.ownerUid) || m.ownerUid || '',
+      storeOwnerUid: sellerUid,
       storeOwnerEmail: (store && store.ownerEmail) || m.ownerEmail || '',
-      buyerUid: user.uid || '',
+      buyerUid: buyerUid,
       buyerEmail: user.email || '',
+      parties: [String(buyerUid), String(sellerUid)],
       by: user.name || user.email || 'Customer',
       status: 'Pending',
       createdAt: new Date().toISOString(),
