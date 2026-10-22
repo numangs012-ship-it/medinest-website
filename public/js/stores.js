@@ -63,6 +63,12 @@ function userHasStore() {
  * Create a new store
  */
 async function createStore() {
+  // Customers cannot create stores (doctor accounts only)
+  if (typeof isDoctor === 'function' && !isDoctor()) {
+    alert('Only doctor accounts can create a store.');
+    return;
+  }
+
   const nameEl = document.getElementById('storeName');
   const doctorEl = document.getElementById('doctorName');
   const typeEl = document.getElementById('storeType');
@@ -171,10 +177,10 @@ function renderStores() {
       '</div>';
   }).join('');
 
-  // Show/hide create store card based on ownership
+  // Show/hide create store card: doctors only, and only if they have no store yet
   const createCard = document.getElementById('createStoreCard');
   if (createCard) {
-    createCard.style.display = userHasStore() ? 'none' : '';
+    createCard.style.display = (typeof isDoctor === 'function' && isDoctor() && !userHasStore()) ? '' : 'none';
   }
 }
 
