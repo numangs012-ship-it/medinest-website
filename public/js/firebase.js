@@ -66,6 +66,99 @@ function objToFields(obj) {
 }
 
 /**
+ * GET a single document by ID
+ */
+async function fsGetOne(collection, docId) {
+  const token = getIdToken();
+  if (!token) throw new Error('Not logged in');
+
+  const res = await fetch(`${FIRESTORE_BASE}/${collection}/${docId}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+
+  if (res.status === 401) throw new Error('Session expired. Please login again.');
+  if (res.status === 404) return null;
+  if (res.status === 403) throw new Error('Access denied by security rules.');
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to load ${collection}/${docId}: ${err}`);
+  }
+
+  return docToObj(await res.json());
+}
+
+/**
+ * Filtered query via Firestore REST :runQuery (rules-safe).
+ * filters: [{ field, op: 'EQUAL' | 'ARRAY_CONTAINS', value }]
+ */
+async function fsQuery(collection, filters) {
+  const token = getIdToken();
+  if (!token) throw new Error('Not logged in');
+
+  const fieldFilters = filters.map(f => ({
+    fieldFilter: {
+      field: { fieldPath: f.field },
+      op: f.op,
+      value: { stringValue: String(f.value) },
+    },
+  }));
+
+  const structuredQuery = {
+    from: [{ collectionId: collection }],
+    where: fieldFilters.length === 1
+      ? fieldFilters[0]
+      : { compositeFilter: { op: 'AND', filters: fieldFilters } },
+  };
+
+  const res = await fetch(`${FIRESTORE_BASE}:runQuery`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ structuredQuery }),
+  });
+
+  if (res.status === 401) throw new Error('Session expired. Please login again.');
+  if (res.status === 403) throw new Error('Access denied by security rules.');
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to query ${collection}: ${err}`);
+  }
+
+  const data = await res.json();
+  return (data || [])
+    .map(r => (r.document ? docToObj(r.document) : null))
+    .filter(Boolean);
+}
+
+/**
+ * SET (create-or-replace) a document with a known ID
+ */
+async function fsSet(collection, docId, obj) {
+  const token = getIdToken();
+  if (!token) throw new Error('Not logged in');
+
+  const res = await fetch(`${FIRESTORE_BASE}/${collection}/${docId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ fields: objToFields(obj) }),
+  });
+
+  if (res.status === 401) throw new Error('Session expired. Please login again.');
+  if (res.status === 403) throw new Error('Access denied by security rules.');
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to save ${collection}/${docId}: ${err}`);
+  }
+
+  return docToObj(await res.json());
+}
+
+/**
  * GET all documents from a collection
  */
 async function fsGet(collection) {
