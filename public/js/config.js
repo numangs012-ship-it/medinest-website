@@ -25,6 +25,8 @@ const COLLECTIONS = {
   LEDGER: 'ledger',
   REVIEWS: 'reviews',
   STORE_REVIEWS: 'storeReviews',
+  USERS: 'users',
+  ADMINS: 'admins',
 };
 
 // Categories
