@@ -4,10 +4,13 @@ let orders = [];
 let ledger = [];
 
 /**
- * Load all orders from Firestore
+ * Load the current user's orders from Firestore (rules-safe filtered query)
  */
 async function loadOrders() {
-  orders = await fsGet(COLLECTIONS.ORDERS);
+  const user = getCurrentUser();
+  const uid = user ? String(user.uid || '') : '';
+  if (!uid) { orders = []; return orders; }
+  orders = await fsQuery(COLLECTIONS.ORDERS, [{ field: 'parties', op: 'ARRAY_CONTAINS', value: uid }]);
   orders.sort(byCreated);
   return orders;
 }
@@ -134,10 +137,13 @@ async function updateOrderStatus(orderId) {
 }
 
 /**
- * Load ledger from Firestore
+ * Load the current user's ledger from Firestore (rules-safe filtered query)
  */
 async function loadLedger() {
-  ledger = await fsGet(COLLECTIONS.LEDGER);
+  const user = getCurrentUser();
+  const uid = user ? String(user.uid || '') : '';
+  if (!uid) { ledger = []; return ledger; }
+  ledger = await fsQuery(COLLECTIONS.LEDGER, [{ field: 'ownerUid', op: 'EQUAL', value: uid }]);
   ledger.sort(byCreated);
   return ledger;
 }
