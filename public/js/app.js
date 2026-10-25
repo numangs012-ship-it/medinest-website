@@ -81,6 +81,8 @@ async function loadAllData() {
     renderStores();
     renderMedicines();
     renderMedStoreDropdown();
+    const bulkContainer = document.getElementById('bulkRows');
+    if (bulkContainer && bulkContainer.children.length === 0) addBulkRow();
     renderOrders();
     renderTracking();
     renderLedger();
@@ -274,8 +276,19 @@ function bindEvents() {
   document.getElementById('addMedBtn').onclick = addMedicine;
   document.getElementById('medStore').onchange = function() {
     const s = stores.find(x => String(x._id) === String(this.value));
-    if (s) populateCategories(s.type || 'homeo');
+    if (s) {
+      const typeEl = document.getElementById('medType');
+      if (typeEl) typeEl.value = s.type || 'homeo';
+      populateCategories(s.type || 'homeo');
+    }
   };
+  document.getElementById('medType').onchange = function() {
+    populateCategories(this.value);
+  };
+
+  // Bulk add
+  document.getElementById('bulkAddRowBtn').onclick = addBulkRow;
+  document.getElementById('bulkSaveBtn').onclick = saveBulkMedicines;
 
   // Ledger
   document.getElementById('addLedBtn').onclick = addTransaction;
