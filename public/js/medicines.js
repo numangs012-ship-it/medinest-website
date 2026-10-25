@@ -46,6 +46,10 @@ function renderMedStoreDropdown() {
     '<option value="' + escH(s._id) + '">' + escH(s.name) + '</option>'
   ).join('');
 
+  // Default the store-type selector to the first store's type
+  const typeEl = document.getElementById('medType');
+  if (typeEl) typeEl.value = myStores[0].type || 'homeo';
+
   // Update categories based on first store's type
   populateCategories(myStores[0].type || 'homeo');
 }
@@ -61,6 +65,8 @@ async function addMedicine() {
   const cat = document.getElementById('medCat').value;
   const storeId = document.getElementById('medStore').value;
   const photo = document.getElementById('medPhoto').value.trim();
+  const typeEl = document.getElementById('medType');
+  const medType = (typeEl && typeEl.value) || '';
 
   if (!name) {
     alert('Medicine name is required.');
@@ -92,7 +98,7 @@ async function addMedicine() {
       cat: cat,
       storeId: String(storeId),
       storeName: store.name || '',
-      storeType: store.type || 'homeo',
+      storeType: medType || store.type || 'homeo',
       photo: photo,
       ownerUid: user.uid || '',
       ownerEmail: user.email || '',
@@ -137,9 +143,10 @@ async function deleteMedicine(idx) {
 }
 
 /**
- * Increase stock (owner only)
+ * Toggle the inline stock-add form for a medicine (owner only).
+ * The form holds a quantity input and an optional stock photo URL.
  */
-async function increaseStock(idx) {
+function increaseStock(idx) {
   const m = medicines[idx];
   if (!m) return;
 
@@ -148,16 +155,50 @@ async function increaseStock(idx) {
     return;
   }
 
-  const qtyStr = prompt('Add how many to stock? (Current: ' + m.stock + ')', '10');
-  if (qtyStr === null) return;
-  const qty = parseInt(qtyStr, 10);
+  const form = document.getElementById('stockForm_' + idx);
+  if (form) form.classList.toggle('hidden');
+}
+
+/**
+ * Hide the inline stock-add form for a medicine
+ */
+function cancelStockForm(idx) {
+  const form = document.getElementById('stockForm_' + idx);
+  if (form) form.classList.add('hidden');
+}
+
+/**
+ * Save the inline stock-add form: adds quantity to stock and,
+ * if a photo URL was given, sets it as the medicine photo and
+ * appends it to the stockPhotos array (owner only).
+ */
+async function saveStockForm(idx) {
+  const m = medicines[idx];
+  if (!m) return;
+
+  if (!isMedOwner(m)) {
+    alert('Only the store owner can update stock.');
+    return;
+  }
+
+  const qtyEl = document.getElementById('stockQty_' + idx);
+  const photoEl = document.getElementById('stockPhoto_' + idx);
+  const qty = qtyEl ? parseInt(qtyEl.value, 10) : NaN;
   if (isNaN(qty) || qty <= 0) {
     alert('Please enter a valid quantity.');
     return;
   }
+  const photoUrl = photoEl ? photoEl.value.trim() : '';
+
+  const update = { stock: (parseInt(m.stock, 10) || 0) + qty };
+  if (photoUrl) {
+    update.photo = photoUrl;
+    const existing = Array.isArray(m.stockPhotos) ? m.stockPhotos : [];
+    update.stockPhotos = existing.concat([photoUrl]);
+  }
 
   try {
-    await fsUpdate(COLLECTIONS.MEDICINES, m._id, { stock: (parseInt(m.stock, 10) || 0) + qty });
+    await fsUpdate(COLLECTIONS.MEDICINES, m._id, update);
     await loadMedicines();
     renderMedicines();
   } catch (e) {
@@ -202,6 +243,12 @@ function renderMedicines() {
     html += '<button class="small" onclick="increaseStock(' + idx + ')">+ Stock</button>';
     html += '<button class="small danger" onclick="deleteMedicine(' + idx + ')">Delete</button>';
     html += '</div></div>';
+    html += '<div id="stockForm_' + idx + '" class="hidden" style="margin-bottom:10px;">';
+    html += '<input type="number" id="stockQty_' + idx + '" placeholder="Add quantity (current: ' + escH(m.stock) + ')" min="1" style="width:170px;display:inline-block;"> ';
+    html += '<input type="text" id="stockPhoto_' + idx + '" placeholder="Stock photo URL (optional)" style="width:230px;display:inline-block;"> ';
+    html += '<button class="small" onclick="saveStockForm(' + idx + ')">Save</button> ';
+    html += '<button class="small secondary" onclick="cancelStockForm(' + idx + ')">Cancel</button>';
+    html += '</div>';
     return html;
   }).join('');
 }
@@ -274,5 +321,153 @@ async function orderMedicine(idx) {
     alert('Order placed successfully!');
   } catch (e) {
     alert('Order failed: ' + e.message);
+  }
+}
+
+/**
+ * Bulk Add — dynamic rows for adding several medicines at once,
+ * each with an optional photo (URL or file picker).
+ * The medMgmtCard is already owner-gated (applyRoleUI), and every
+ * saved medicine uses the owner's own store.
+ */
+let bulkRowCount = 0;
+
+/**
+ * Category <option> HTML for a store type
+ */
+function bulkCategoryOptions(storeType) {
+  const cats = CATEGORIES[storeType] || CATEGORIES.homeo;
+  return cats.map(c => '<option value="' + escH(c) + '">' + escH(c) + '</option>').join('');
+}
+
+/**
+ * Add one bulk-add row to the form
+ */
+function addBulkRow() {
+  const container = document.getElementById('bulkRows');
+  if (!container) return;
+  const myStores = stores.filter(isStoreOwner);
+  const storeType = (myStores[0] && myStores[0].type) || 'homeo';
+  const idx = bulkRowCount++;
+  const row = document.createElement('div');
+  row.className = 'bulk-row';
+  row.id = 'bulkRow_' + idx;
+  row.innerHTML =
+    '<input type="text" id="bulkName_' + idx + '" placeholder="Medicine Name"> ' +
+    '<input type="number" id="bulkPrice_' + idx + '" placeholder="Price (Rs)" min="0"> ' +
+    '<input type="number" id="bulkStock_' + idx + '" placeholder="Stock" min="0"> ' +
+    '<input type="text" id="bulkCompany_' + idx + '" placeholder="Company"> ' +
+    '<select id="bulkCat_' + idx + '">' + bulkCategoryOptions(storeType) + '</select> ' +
+    '<input type="text" id="bulkPhoto_' + idx + '" placeholder="Photo URL (optional)"> ' +
+    '<input type="file" id="bulkFile_' + idx + '" accept="image/*"> ' +
+    '<button class="small danger" onclick="removeBulkRow(' + idx + ')">Remove</button>';
+  container.appendChild(row);
+}
+
+/**
+ * Remove one bulk-add row
+ */
+function removeBulkRow(idx) {
+  const row = document.getElementById('bulkRow_' + idx);
+  if (row) row.remove();
+}
+
+/**
+ * Convert a picked photo file to a data URL.
+ * Files over 700KB are rejected with an alert (Firestore doc size limit).
+ */
+async function bulkFileToDataUrl(file) {
+  if (!file) return '';
+  if (file.size > 700 * 1024) {
+    alert('Photo "' + file.name + '" is over 700KB and was skipped. Use a smaller image or a photo URL.');
+    return '';
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result || '');
+    reader.onerror = () => reject(new Error('Could not read photo.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Validate all bulk rows, then save each medicine to the owner's store
+ */
+async function saveBulkMedicines() {
+  const container = document.getElementById('bulkRows');
+  if (!container) return;
+
+  const myStores = stores.filter(isStoreOwner);
+  if (myStores.length === 0) {
+    alert('Create a store first (one doctor = one store).');
+    return;
+  }
+  const store = myStores[0];
+  const user = getCurrentUser();
+
+  const rows = container.querySelectorAll('.bulk-row');
+  if (rows.length === 0) {
+    alert('Add at least one row first.');
+    return;
+  }
+
+  // Validate every row before saving anything
+  const entries = [];
+  for (const row of rows) {
+    const idx = row.id.replace('bulkRow_', '');
+    const nameEl = document.getElementById('bulkName_' + idx);
+    const priceEl = document.getElementById('bulkPrice_' + idx);
+    const stockEl = document.getElementById('bulkStock_' + idx);
+    const companyEl = document.getElementById('bulkCompany_' + idx);
+    const catEl = document.getElementById('bulkCat_' + idx);
+    const photoEl = document.getElementById('bulkPhoto_' + idx);
+    const fileEl = document.getElementById('bulkFile_' + idx);
+    const name = (nameEl && nameEl.value || '').trim();
+    const price = (priceEl && parseFloat(priceEl.value)) || 0;
+    const stock = (stockEl && parseInt(stockEl.value, 10)) || 0;
+    const company = (companyEl && companyEl.value || '').trim();
+    const cat = (catEl && catEl.value) || '';
+    const photoUrl = (photoEl && photoEl.value || '').trim();
+    const file = (fileEl && fileEl.files && fileEl.files[0]) || null;
+    if (!name) {
+      alert('Medicine name is required in every row.');
+      return;
+    }
+    if (price <= 0) {
+      alert('Please enter a valid price (over 0) in every row.');
+      return;
+    }
+    entries.push({ name, price, stock, company, cat, photoUrl, file });
+  }
+
+  try {
+    for (const e of entries) {
+      let photo = e.photoUrl;
+      if (e.file) {
+        const dataUrl = await bulkFileToDataUrl(e.file);
+        if (dataUrl) photo = dataUrl;
+      }
+      await fsAdd(COLLECTIONS.MEDICINES, {
+        name: e.name,
+        price: e.price,
+        stock: e.stock,
+        company: e.company,
+        cat: e.cat,
+        storeId: String(store._id),
+        storeName: store.name || '',
+        storeType: store.type || 'homeo',
+        photo: photo,
+        ownerUid: user.uid || '',
+        ownerEmail: user.email || '',
+        createdAt: new Date().toISOString(),
+      });
+    }
+    container.innerHTML = '';
+    bulkRowCount = 0;
+    addBulkRow();
+    await loadMedicines();
+    renderMedicines();
+  } catch (err) {
+    alert('Bulk save failed: ' + err.message);
   }
 }
