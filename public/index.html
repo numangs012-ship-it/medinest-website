@@ -136,8 +136,18 @@
           <input type="text" id="medCompany" placeholder="Company/Manufacturer">
           <select id="medCat"></select>
           <select id="medStore"></select>
+          <select id="medType">
+            <option value="homeo">Homeopathic</option>
+            <option value="allo">Allopathic</option>
+          </select>
           <input type="text" id="medPhoto" placeholder="Photo URL (optional)">
           <button id="addMedBtn">Add Medicine</button>
+          <hr style="margin:16px 0;">
+          <h4>Bulk Add Medicines</h4>
+          <p style="color:#666;font-size:0.9rem;margin-bottom:12px;">Add several medicines at once, each with an optional photo.</p>
+          <div id="bulkRows"></div>
+          <button id="bulkAddRowBtn" class="small secondary">+ Add row</button>
+          <button id="bulkSaveBtn" class="small">Save all</button>
         </div>
       </section>
 
