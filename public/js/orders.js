@@ -45,7 +45,9 @@ function isOrderSeller(o) {
 }
 
 /**
- * Render orders (isolated per user)
+ * Render orders (isolated per user), split into two sections:
+ * Doctor Orders (received on the user's own store) and
+ * My Customer Orders (placed by the user as a buyer).
  */
 function renderOrders() {
   const listEl = document.getElementById('orderList');
@@ -58,8 +60,10 @@ function renderOrders() {
     return;
   }
 
-  listEl.innerHTML = myOrders.map(o => {
-    const isSeller = isOrderSeller(o);
+  const sellerOrders = myOrders.filter(isOrderSeller);
+  const buyerOrders = myOrders.filter(o => !isOrderSeller(o));
+
+  const orderHtml = o => {
     return '<div class="order-item">' +
       '<strong>' + escH(o.medicine || '') + '</strong> × ' + escH(o.qty || '') +
       ' <span class="status ' + escH(o.status || 'Pending') + '">' + escH(o.status || 'Pending') + '</span><br>' +
@@ -67,9 +71,19 @@ function renderOrders() {
       'Total: Rs ' + escH(o.total || '') +
       ' | Store: ' + escH(o.storeName || '') +
       ' | By: ' + escH(o.by || '') +
-      (isSeller ? '' : '') +
       '</span></div>';
-  }).join('');
+  };
+
+  let html = '';
+  if (sellerOrders.length > 0) {
+    html += '<h4>📥 Doctor Orders</h4>';
+    html += sellerOrders.map(orderHtml).join('');
+  }
+  if (buyerOrders.length > 0) {
+    html += '<h4>🛍️ My Customer Orders</h4>';
+    html += buyerOrders.map(orderHtml).join('');
+  }
+  listEl.innerHTML = html;
 }
 
 /**
